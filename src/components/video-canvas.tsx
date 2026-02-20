@@ -124,9 +124,9 @@ export function VideoCanvas({ transitioning, onTransitionComplete }: VideoCanvas
 
     const handleScroll = () => {
       // Map scroll position to frame index
-      // The video occupies the first viewport height of scroll
+      // Hero is 250vh — video scrubs through the first 150vh of scroll
       const scrollY = window.scrollY
-      const maxScroll = window.innerHeight * 1.2 // 120vh of scroll scrubs all frames
+      const maxScroll = window.innerHeight * 1.5
       const ratio = Math.min(scrollY / maxScroll, 1)
       const index = Math.floor(ratio * (TOTAL_FRAMES - 1))
 
@@ -170,9 +170,7 @@ export function VideoCanvas({ transitioning, onTransitionComplete }: VideoCanvas
         const target = targetFrameRef.current
         const diff = target - floatFrame
         if (Math.abs(diff) > 0.3) {
-          // Lerp speed: faster when target is high (near center)
-          const targetRatio = target / TOTAL_FRAMES
-          const speed = 0.04 + 0.14 * targetRatio
+          const speed = 0.15
           floatFrame += diff * speed
           const index = Math.round(floatFrame)
           const clamped = Math.max(0, Math.min(TOTAL_FRAMES - 1, index))
@@ -192,17 +190,17 @@ export function VideoCanvas({ transitioning, onTransitionComplete }: VideoCanvas
       const cx = window.innerWidth / 2
       const cy = window.innerHeight / 2
 
-      // Normalize to -1..1 with tighter bounds (0.85 of half-dimension)
-      // so the mouse effect reaches edges sooner
-      const dx = (e.clientX - cx) / (cx * 0.85)
-      const dy = (e.clientY - cy) / (cy * 0.7)
+      // Tighter bounds — mouse at 75% of half-dimension already reads as "edge"
+      const dx = (e.clientX - cx) / (cx * 0.75)
+      const dy = (e.clientY - cy) / (cy * 0.65)
 
       const distance = Math.min(Math.sqrt(dx * dx + dy * dy), 1.0)
 
       // Invert: close to center = last frame, edge = first frame
       const ratio = 1 - distance
-      // Ease-in: SLOW build from edges, ACCELERATES toward center
-      const eased = ratio * ratio * ratio
+      // Mostly linear with a subtle ease-in at the very end (near center)
+      // ratio^1.4 is barely curved — 50% distance = ~38% through frames
+      const eased = Math.pow(ratio, 1.4)
       targetFrameRef.current = Math.floor(eased * (TOTAL_FRAMES - 1))
     }
 

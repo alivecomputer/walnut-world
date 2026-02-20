@@ -93,3 +93,60 @@
     @apply bg-background text-foreground font-[family-name:var(--font-outfit)];
   }
 }
+
+/* Animated border CTA button */
+@property --glow-angle-1 {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+@property --glow-angle-2 {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 90deg;
+}
+@property --glow-angle-3 {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 180deg;
+}
+
+@keyframes glowSpin1 { to { --glow-angle-1: 360deg; } }
+@keyframes glowSpin2 { to { --glow-angle-2: -270deg; } }
+@keyframes glowSpin3 { to { --glow-angle-3: 540deg; } }
+
+.btn-glow {
+  --border-width: 2px;
+  position: relative;
+  border-radius: 9999px;
+  padding: var(--border-width);
+  background-image:
+    conic-gradient(from var(--glow-angle-1) at 10% 15%, transparent, #F59E0B 10%, transparent 30%),
+    conic-gradient(from var(--glow-angle-2) at 70% 60%, transparent, #D97706 10%, transparent 60%),
+    conic-gradient(from var(--glow-angle-3) at 50% 20%, transparent, #92400E 10%, transparent 50%);
+  animation:
+    glowSpin1 3s linear infinite,
+    glowSpin2 8s linear infinite,
+    glowSpin3 13s linear infinite;
+  box-shadow: 0 0 20px -4px rgba(217, 119, 6, 0.3), 0 0 60px -8px rgba(217, 119, 6, 0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-glow:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 28px -4px rgba(217, 119, 6, 0.5), 0 0 80px -8px rgba(217, 119, 6, 0.25);
+}
+.btn-glow:active {
+  transform: scale(1);
+}
+.btn-glow-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: #0a0908;
+  color: #FFF8EE;
+  padding: 0.875rem 2rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 1rem;
+  white-space: nowrap;
+}

@@ -88,7 +88,7 @@ export function Header() {
                   </li>
                 </ul>
                 <div className="mt-6 flex flex-col gap-3 px-3">
-                  <Button asChild size="sm" className="rounded-full border border-cream/20 bg-cream/10 text-cream backdrop-blur-sm hover:bg-cream/20">
+                  <Button asChild size="sm" className="rounded-full bg-amber text-cream hover:bg-amber/90">
                     <Link href="#download">Get Walnut</Link>
                   </Button>
                 </div>
@@ -97,7 +97,7 @@ export function Header() {
 
             {/* Desktop CTA */}
             <div className="hidden items-center gap-3 lg:flex">
-              <Button asChild size="sm" className="rounded-full border border-cream/20 bg-cream/10 text-cream backdrop-blur-sm hover:bg-cream/20">
+              <Button asChild size="sm" className="rounded-full bg-amber text-cream hover:bg-amber/90">
                 <Link href="#download">Get Walnut</Link>
               </Button>
             </div>

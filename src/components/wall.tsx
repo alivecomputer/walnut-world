@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { Apple, Send, Monitor } from 'lucide-react'
+import { COPPER_GLASS, COPPER_SHEEN } from '@/lib/copper-glass'
 
-const TAKEN_NAMES = ['ben', 'attila', 'stuart', 'will', 'clara', 'leon']
+const TAKEN_NAMES = ['ben', 'attila', 'will', 'stuart', 'clara', 'leon']
 
 const WALL_TAGS = [
   ...TAKEN_NAMES.map(name => ({ name, active: true })),
@@ -74,14 +75,7 @@ function ClaimCTA({ name }: { name: string }) {
   )
 }
 
-// Shared copper glass style for Wall card and Nav
-export const COPPER_GLASS = {
-  background: 'linear-gradient(135deg, rgba(120, 70, 25, 0.8) 0%, rgba(90, 50, 15, 0.75) 50%, rgba(120, 70, 25, 0.7) 100%)',
-  backdropFilter: 'blur(32px) saturate(1.6)',
-  WebkitBackdropFilter: 'blur(32px) saturate(1.6)',
-  border: '1px solid rgba(217, 119, 6, 0.25)',
-  boxShadow: 'inset 0 1px 0 0 rgba(255, 200, 100, 0.15), inset 0 -1px 0 0 rgba(0,0,0,0.2), 0 8px 40px -12px rgba(80, 40, 10, 0.4)',
-} as const
+// COPPER_GLASS is now imported from @/lib/copper-glass
 
 export function Wall() {
   const [input, setInput] = useState('')
@@ -130,7 +124,7 @@ export function Wall() {
         {/* Copper sheen */}
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent 10%, rgba(217, 119, 6, 0.3) 50%, transparent 90%)' }}
+          style={COPPER_SHEEN}
         />
 
         <div className="text-center">

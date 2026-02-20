@@ -3,33 +3,33 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'will.walnut.world',
-  description: "Will Bainbridge's world — AI UX and interaction design.",
+  description: "Will Bainbridge's world — AI researcher, 6 months in the lab.",
 }
 
 export default function WillWorld() {
   return (
     <WorldPage
       owner="will"
-      tagline="The last mile belongs to design."
-      bio="AI UX and interaction designer. Obsessed with how humans and AI systems should feel together. Don't give the last mile to the intern — the interface IS the product."
+      tagline="Six months in the lab."
+      bio="AI researcher. Spent half a year deep in the models — studying how context compounds, how agents degrade, where the architecture breaks. The research that became Walnut's foundation."
       walnuts={[
         {
-          name: 'Walnut UX',
+          name: 'ALIVE Research',
           type: 'venture',
-          phase: 'designing',
-          description: 'Designing the interaction patterns for ALIVE. How do you make a file system feel alive? How does context surface without being noisy?',
+          phase: 'publishing',
+          description: 'The empirical basis for alive computers. What happens when you give an agent persistent context across sessions. What breaks. What compounds.',
         },
         {
-          name: 'Terminal Aesthetics',
+          name: 'Agent Architecture',
           type: 'experiment',
-          phase: 'prototyping',
-          description: 'Exploring how CLI tools can have beautiful, warm UX. The terminal doesn\'t have to feel cold.',
+          phase: 'active',
+          description: 'Testing how different context structures affect agent performance. File-based vs database. Flat vs nested. The experiments that shaped the ALIVE framework.',
         },
         {
-          name: 'Design Systems',
+          name: 'Lab Notes',
           type: 'life',
-          phase: 'collecting',
-          description: 'Cataloguing the design systems that got it right. What makes a tool feel like it belongs to you.',
+          phase: 'ongoing',
+          description: 'Six months of findings, dead ends, and breakthroughs. The raw material behind the thesis.',
         },
       ]}
     />

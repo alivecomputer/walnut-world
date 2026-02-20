@@ -9,13 +9,7 @@ import { cn } from '@/lib/utils'
 
 const CREAM = '#FFF8EE'
 
-const COPPER_GLASS_SCROLLED: React.CSSProperties = {
-  background: 'linear-gradient(135deg, rgba(120, 70, 25, 0.75) 0%, rgba(90, 50, 15, 0.7) 50%, rgba(120, 70, 25, 0.65) 100%)',
-  backdropFilter: 'blur(32px) saturate(1.6)',
-  WebkitBackdropFilter: 'blur(32px) saturate(1.6)',
-  border: '1px solid rgba(217, 119, 6, 0.2)',
-  boxShadow: 'inset 0 1px 0 0 rgba(255, 200, 100, 0.12), 0 8px 32px -8px rgba(80, 40, 10, 0.3)',
-}
+import { COPPER_GLASS_NAV } from '@/lib/copper-glass'
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
@@ -37,7 +31,7 @@ export function Header() {
             'mx-auto w-full rounded-2xl border border-transparent px-3 transition-all duration-500 ease-in-out',
             isScrolled ? 'max-w-3xl px-5' : 'max-w-6xl',
           )}
-          style={isScrolled ? COPPER_GLASS_SCROLLED : undefined}
+          style={isScrolled ? COPPER_GLASS_NAV : undefined}
         >
           <div className="relative flex flex-wrap items-center justify-between lg:py-3">
             <div className="max-lg:in-data-[state=active]:border-b max-lg:in-data-[state=active]:border-white/10 flex items-center justify-between gap-8 max-lg:h-14 max-lg:w-full">

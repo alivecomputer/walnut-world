@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { COPPER_GLASS } from './wall'
+import { COPPER_GLASS } from '@/lib/copper-glass'
 
 interface WalnutCard {
   name: string

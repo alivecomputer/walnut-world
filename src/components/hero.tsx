@@ -56,7 +56,6 @@ export function Hero({ onDownloadClick }: HeroProps) {
               className="btn-glow cursor-pointer"
             >
               <span className="btn-glow-inner">
-                <Apple className="size-5" />
                 Build Your World on Mac
               </span>
             </button>

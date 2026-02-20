@@ -147,6 +147,12 @@ export function Wall() {
           <p className="mt-2 text-base text-cream/40">
             Claim your address — free for the first 10,000
           </p>
+          <p className="group relative mt-1.5 inline-block cursor-default text-xs text-cream/25">
+            After 10,000: one-time purchase, own it forever
+            <span className="pointer-events-none absolute -bottom-20 left-1/2 z-10 w-64 -translate-x-1/2 rounded-lg bg-black/90 px-4 py-3 text-left text-xs leading-relaxed text-cream/60 opacity-0 shadow-lg backdrop-blur transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+              You don&apos;t need a world address to be a worldbuilder or use Walnut. Everything is open source. The domains are for the culture.
+            </span>
+          </p>
         </div>
 
         {/* Username checker */}
@@ -210,18 +216,18 @@ export function Wall() {
                   transform: `rotate(${getRotation(tag.name)}deg) translate(${offset.x}px, ${offset.y}px)`,
                 }}
               >
-                <div
-                  className={`rounded-lg border px-3 py-1.5 font-mono text-xs transition-all ${
-                    tag.active
-                      ? 'border-amber/20 text-cream/60'
-                      : 'border-cream/[0.04] text-cream/15'
-                  }`}
+                {tag.active ? (
+                <a
+                  href={`/${tag.name}`}
+                  className="block rounded-lg border border-amber/20 px-3 py-1.5 font-mono text-xs text-cream/60 transition-all hover:border-amber/40 hover:text-cream/80"
                 >
-                  {tag.active
-                    ? <>{tag.name}<span className="text-cream/25">.walnut.world</span></>
-                    : `[ ${tag.name} ]`
-                  }
+                  {tag.name}<span className="text-cream/25">.walnut.world</span>
+                </a>
+              ) : (
+                <div className="rounded-lg border border-cream/[0.04] px-3 py-1.5 font-mono text-xs text-cream/15">
+                  [ {tag.name} ]
                 </div>
+              )}
               </div>
             )
           })}

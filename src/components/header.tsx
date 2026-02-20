@@ -36,9 +36,12 @@ export function Header() {
           <div className="relative flex flex-wrap items-center justify-between lg:py-3">
             <div className="max-lg:in-data-[state=active]:border-b max-lg:in-data-[state=active]:border-white/10 flex items-center justify-between gap-8 max-lg:h-14 max-lg:w-full">
               <Link href="/" aria-label="home" className="h-fit transition-all duration-500">
-                <span className="font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight" style={{ color: CREAM, textShadow: '0 1px 10px rgba(0,0,0,0.3)' }}>
-                  Walnut
-                </span>
+                <img
+                  src="/walnut-logo.svg"
+                  alt="Walnut"
+                  className="h-7 w-auto"
+                  style={{ filter: 'drop-shadow(0 1px 8px rgba(0,0,0,0.3))' }}
+                />
               </Link>
 
               <button

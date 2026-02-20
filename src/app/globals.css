@@ -142,7 +142,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.625rem;
-  background: #0a0908;
+  background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
   color: #FFF8EE;
   padding: 0.875rem 2rem;
   border-radius: 9999px;

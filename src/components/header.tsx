@@ -1,0 +1,109 @@
+'use client'
+
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import React from 'react'
+import { useScroll, useMotionValueEvent } from 'motion/react'
+import { Menu, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+const CREAM = '#FFF8EE'
+
+const COPPER_GLASS_SCROLLED: React.CSSProperties = {
+  background: 'linear-gradient(135deg, rgba(120, 70, 25, 0.75) 0%, rgba(90, 50, 15, 0.7) 50%, rgba(120, 70, 25, 0.65) 100%)',
+  backdropFilter: 'blur(32px) saturate(1.6)',
+  WebkitBackdropFilter: 'blur(32px) saturate(1.6)',
+  border: '1px solid rgba(217, 119, 6, 0.2)',
+  boxShadow: 'inset 0 1px 0 0 rgba(255, 200, 100, 0.12), 0 8px 32px -8px rgba(80, 40, 10, 0.3)',
+}
+
+export function Header() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
+  const [isScrolled, setIsScrolled] = React.useState(false)
+  const { scrollY } = useScroll()
+
+  useMotionValueEvent(scrollY, 'change', (latest) => {
+    setIsScrolled(latest > 50)
+  })
+
+  return (
+    <header data-state={isMobileMenuOpen ? 'active' : 'inactive'}>
+      <div className={cn(
+        'max-lg:in-data-[state=active]:h-screen max-lg:h-18 fixed inset-x-0 top-0 z-50 pt-2 max-lg:overflow-hidden max-lg:px-2 lg:pt-3',
+        'max-lg:in-data-[state=active]:backdrop-blur-xl max-lg:in-data-[state=active]:bg-black/60'
+      )}>
+        <div
+          className={cn(
+            'mx-auto w-full rounded-2xl border border-transparent px-3 transition-all duration-500 ease-in-out',
+            isScrolled ? 'max-w-3xl px-5' : 'max-w-6xl',
+          )}
+          style={isScrolled ? COPPER_GLASS_SCROLLED : undefined}
+        >
+          <div className="relative flex flex-wrap items-center justify-between lg:py-3">
+            <div className="max-lg:in-data-[state=active]:border-b max-lg:in-data-[state=active]:border-white/10 flex items-center justify-between gap-8 max-lg:h-14 max-lg:w-full">
+              <Link href="/" aria-label="home" className="h-fit transition-all duration-500">
+                <span className="font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight" style={{ color: CREAM, textShadow: '0 1px 10px rgba(0,0,0,0.3)' }}>
+                  Walnut
+                </span>
+              </Link>
+
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-label={isMobileMenuOpen ? 'Close Menu' : 'Open Menu'}
+                className="relative z-20 -m-2.5 -mr-3 block cursor-pointer p-2.5 lg:hidden">
+                <Menu className="in-data-[state=active]:rotate-180 in-data-[state=active]:scale-0 in-data-[state=active]:opacity-0 m-auto size-5 duration-200" style={{ color: CREAM }} />
+                <X className="in-data-[state=active]:rotate-0 in-data-[state=active]:scale-100 in-data-[state=active]:opacity-100 absolute inset-0 m-auto size-5 -rotate-180 scale-0 opacity-0 duration-200" style={{ color: CREAM }} />
+              </button>
+            </div>
+
+            {/* Desktop nav */}
+            <nav className="absolute inset-0 m-auto hidden size-fit lg:flex">
+              <ul className="flex items-center gap-1">
+                <li>
+                  <Link href="https://alivecomputer.com" target="_blank" rel="noopener noreferrer" className="rounded-lg px-3 py-2 text-sm font-medium transition-colors" style={{ color: 'rgba(255, 248, 238, 0.5)', textShadow: '0 1px 6px rgba(0,0,0,0.3)' }}>
+                    Thesis
+                  </Link>
+                </li>
+                <li>
+                  <Link href="https://skool.com/aliveoperators" target="_blank" rel="noopener noreferrer" className="rounded-lg px-3 py-2 text-sm font-medium transition-colors" style={{ color: 'rgba(255, 248, 238, 0.5)', textShadow: '0 1px 6px rgba(0,0,0,0.3)' }}>
+                    Community
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+
+            {/* Mobile nav */}
+            {isMobileMenuOpen && (
+              <nav className="w-full pt-4 pb-6 lg:hidden">
+                <ul className="space-y-1">
+                  <li>
+                    <Link href="https://alivecomputer.com" target="_blank" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg px-3 py-3 text-lg font-medium" style={{ color: CREAM }}>
+                      Thesis
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="https://skool.com/aliveoperators" target="_blank" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg px-3 py-3 text-lg font-medium" style={{ color: CREAM }}>
+                      Community
+                    </Link>
+                  </li>
+                </ul>
+                <div className="mt-6 flex flex-col gap-3 px-3">
+                  <Button asChild size="sm" style={{ backgroundColor: '#D97706', color: CREAM }}>
+                    <Link href="#download">Get Walnut</Link>
+                  </Button>
+                </div>
+              </nav>
+            )}
+
+            {/* Desktop CTA */}
+            <div className="hidden items-center gap-3 lg:flex">
+              <Button asChild size="sm" className="hover:brightness-110" style={{ backgroundColor: '#D97706', color: CREAM }}>
+                <Link href="#download">Get Walnut</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  )
+}

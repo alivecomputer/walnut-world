@@ -8,7 +8,7 @@ const TAKEN_NAMES = ['ben', 'attila', 'will', 'stuart', 'clara', 'leon']
 
 const WALL_TAGS = [
   ...TAKEN_NAMES.map(name => ({ name, active: true })),
-  ...Array.from({ length: 12 }, (_, i) => ({
+  ...Array.from({ length: 4 }, (_, i) => ({
     name: String(i + 1).padStart(3, '0'),
     active: false,
   })),
@@ -77,9 +77,11 @@ function ClaimCTA({ name }: { name: string }) {
 
 export function Wall() {
   const [input, setInput] = useState('')
-  const [state, setState] = useState<'idle' | 'checking' | 'available' | 'taken' | 'claim'>('idle')
+  const [state, setState] = useState<'idle' | 'checking' | 'available' | 'taken' | 'held' | 'reserved' | 'claim'>('idle')
+  const [holdMinutes, setHoldMinutes] = useState(0)
   const cleanName = input.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20)
 
+  // Check name availability via API (falls back to static list if API unavailable)
   useEffect(() => {
     if (!cleanName) {
       setState('idle')
@@ -87,19 +89,50 @@ export function Wall() {
     }
 
     setState('checking')
-    const timer = setTimeout(() => {
-      if (TAKEN_NAMES.includes(cleanName)) {
-        setState('taken')
-      } else {
-        setState('available')
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/name/check?name=${cleanName}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.status === 'taken') setState('taken')
+          else if (data.status === 'held') setState('held')
+          else setState('available')
+        } else {
+          // Fallback to static check
+          setState(TAKEN_NAMES.includes(cleanName) ? 'taken' : 'available')
+        }
+      } catch {
+        setState(TAKEN_NAMES.includes(cleanName) ? 'taken' : 'available')
       }
     }, 400)
 
     return () => clearTimeout(timer)
   }, [cleanName])
 
-  const handleClaim = () => {
-    if (state === 'available') {
+  // Reserve name via API
+  const handleClaim = async () => {
+    if (state !== 'available') return
+
+    try {
+      const res = await fetch('/api/name/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: cleanName }),
+      })
+      const data = await res.json()
+
+      if (data.ok) {
+        setHoldMinutes(Math.ceil((data.holdSeconds ?? 1800) / 60))
+        setState('reserved')
+        if (typeof window !== 'undefined' && window.plausible) {
+          window.plausible('Username Reserved', { props: { name: cleanName } })
+        }
+      } else {
+        // Someone else grabbed it
+        setState('taken')
+      }
+    } catch {
+      // API down — show claim flow anyway
       setState('claim')
       if (typeof window !== 'undefined' && window.plausible) {
         window.plausible('Username Claimed', { props: { name: cleanName } })
@@ -214,6 +247,11 @@ export function Wall() {
                     {cleanName}.walnut.world is taken
                   </span>
                 )}
+                {state === 'held' && (
+                  <span className="text-amber-light/60">
+                    {cleanName}.walnut.world is currently held
+                  </span>
+                )}
                 {state === 'available' && (
                   <button
                     onClick={handleClaim}
@@ -221,9 +259,17 @@ export function Wall() {
                   >
                     {cleanName}.walnut.world is available
                     <span className="ml-2 text-cream/30 transition-colors group-hover:text-cream/60">
-                      press enter
+                      press enter to save
                     </span>
                   </button>
+                )}
+                {state === 'reserved' && (
+                  <div className="space-y-3">
+                    <p className="text-emerald-400/90">
+                      <span className="text-emerald-300">{cleanName}.walnut.world</span> saved for {holdMinutes} minutes
+                    </p>
+                    <ClaimCTA name={cleanName} />
+                  </div>
                 )}
                 {state === 'claim' && (
                   <ClaimCTA name={cleanName} />

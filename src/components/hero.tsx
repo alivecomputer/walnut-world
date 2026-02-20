@@ -36,7 +36,7 @@ export function Hero({ onDownloadClick }: HeroProps) {
         >
           Your context. Your machine. Your world.
         </p>
-        <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
+        <div className="mt-10 flex flex-col items-center gap-4">
           {isMobile ? (
             <a
               href={`mailto:?subject=Walnut%20%E2%80%94%20Build%20Your%20World&body=Open%20this%20on%20your%20Mac%3A%20https%3A%2F%2Fwalnut.world`}

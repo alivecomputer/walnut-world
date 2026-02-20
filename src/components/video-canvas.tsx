@@ -4,46 +4,43 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 
 const TOTAL_FRAMES = 73
 const FRAME_PATH = '/frames/frame-'
+const TRANSITION_PATH = '/transition/frame-'
+const DOWNLOAD_URL = 'https://github.com/alivecomputer/walnut/releases'
 
-// The CTA button is centered on screen — this is the gravity well
-// We compute the center of the viewport as the anchor point
 function getCTACenter(): { x: number; y: number } {
-  return {
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
-  }
+  return { x: window.innerWidth / 2, y: window.innerHeight / 2 }
 }
 
-// Max possible distance from center to any corner
-function getMaxRadius(): number {
-  const cx = window.innerWidth / 2
-  const cy = window.innerHeight / 2
-  return Math.sqrt(cx * cx + cy * cy)
-}
-
-function getFrameSrc(index: number): string {
+function getFrameSrc(index: number, path: string): string {
   const padded = String(index + 1).padStart(3, '0')
-  return `${FRAME_PATH}${padded}.webp`
+  return `${path}${padded}.webp`
 }
 
-export function VideoCanvas() {
+interface VideoCanvasProps {
+  transitioning?: boolean
+}
+
+export function VideoCanvas({ transitioning }: VideoCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const framesRef = useRef<HTMLImageElement[]>([])
+  const transitionFramesRef = useRef<HTMLImageElement[]>([])
   const currentFrameRef = useRef(0)
   const targetFrameRef = useRef(0)
   const [loaded, setLoaded] = useState(false)
+  const [transitionLoaded, setTransitionLoaded] = useState(false)
   const [motionPermission, setMotionPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
   const rafRef = useRef<number>(0)
   const autoPlayRef = useRef(true)
+  const transitioningRef = useRef(false)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
-  // Preload all frames
+  // Preload hero frames
   useEffect(() => {
     let loadedCount = 0
     const images: HTMLImageElement[] = []
-
     for (let i = 0; i < TOTAL_FRAMES; i++) {
       const img = new Image()
-      img.src = getFrameSrc(i)
+      img.src = getFrameSrc(i, FRAME_PATH)
       img.onload = () => {
         loadedCount++
         if (loadedCount === TOTAL_FRAMES) {
@@ -55,11 +52,29 @@ export function VideoCanvas() {
     }
   }, [])
 
-  // Draw frame to canvas
-  const drawFrame = useCallback((index: number) => {
+  // Preload transition frames in background
+  useEffect(() => {
+    let loadedCount = 0
+    const images: HTMLImageElement[] = []
+    for (let i = 0; i < TOTAL_FRAMES; i++) {
+      const img = new Image()
+      img.src = getFrameSrc(i, TRANSITION_PATH)
+      img.onload = () => {
+        loadedCount++
+        if (loadedCount === TOTAL_FRAMES) {
+          transitionFramesRef.current = images
+          setTransitionLoaded(true)
+        }
+      }
+      images.push(img)
+    }
+  }, [])
+
+  // Draw any frame from any source to canvas
+  const drawFrameFrom = useCallback((frames: HTMLImageElement[], index: number) => {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
-    const img = framesRef.current[index]
+    const img = frames[index]
     if (!canvas || !ctx || !img) return
 
     canvas.width = window.innerWidth
@@ -75,17 +90,62 @@ export function VideoCanvas() {
     ctx.drawImage(img, x, y, img.naturalWidth * scale, img.naturalHeight * scale)
   }, [])
 
-  // Smooth interpolation loop
+  const drawFrame = useCallback((index: number) => {
+    drawFrameFrom(framesRef.current, index)
+  }, [drawFrameFrom])
+
+  // Transition: play second video at 24fps, open link at end
   useEffect(() => {
-    if (!loaded) return
+    if (!transitioning || !transitionLoaded) return
+    transitioningRef.current = true
+
+    // Cancel any existing animation
+    cancelAnimationFrame(rafRef.current)
+
+    // Fade out the overlay
+    if (overlayRef.current) {
+      overlayRef.current.style.transition = 'opacity 0.5s'
+      overlayRef.current.style.opacity = '0'
+    }
+
+    let frame = 0
+    const fps = 24
+    const interval = 1000 / fps
+    let lastTime = performance.now()
+
+    const playTransition = (now: number) => {
+      const delta = now - lastTime
+      if (delta >= interval) {
+        lastTime = now - (delta % interval)
+        drawFrameFrom(transitionFramesRef.current, frame)
+        frame++
+      }
+
+      if (frame < TOTAL_FRAMES) {
+        rafRef.current = requestAnimationFrame(playTransition)
+      } else {
+        // Freeze on last frame, open download in new tab
+        drawFrameFrom(transitionFramesRef.current, TOTAL_FRAMES - 1)
+        window.open(DOWNLOAD_URL, '_blank', 'noopener,noreferrer')
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(playTransition)
+
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [transitioning, transitionLoaded, drawFrameFrom])
+
+  // Main interactive loop (only when not transitioning)
+  useEffect(() => {
+    if (!loaded || transitioning) return
 
     drawFrame(0)
-
     let floatFrame = 0
 
     const animate = () => {
+      if (transitioningRef.current) return
+
       if (autoPlayRef.current) {
-        // Auto-loop slowly
         floatFrame = (floatFrame + 0.15) % TOTAL_FRAMES
         const index = Math.floor(floatFrame)
         if (index !== currentFrameRef.current) {
@@ -93,12 +153,9 @@ export function VideoCanvas() {
           drawFrame(index)
         }
       } else {
-        // Smooth lerp toward target frame
         const target = targetFrameRef.current
         const diff = target - floatFrame
-
         if (Math.abs(diff) > 0.5) {
-          // Slower lerp as we approach center (high frame numbers)
           const speed = 0.06 + 0.08 * (1 - floatFrame / TOTAL_FRAMES)
           floatFrame += diff * speed
           const index = Math.round(floatFrame)
@@ -115,64 +172,42 @@ export function VideoCanvas() {
 
     rafRef.current = requestAnimationFrame(animate)
 
-    // Desktop: radial distance from CTA center
-    // Y-axis weighted 1.8x heavier for more vertical sensitivity
     const handleMouse = (e: MouseEvent) => {
       autoPlayRef.current = false
       const center = getCTACenter()
-
       const dx = (e.clientX - center.x) / (window.innerWidth / 2) * 1.4
       const dy = (e.clientY - center.y) / (window.innerHeight / 2) * 1.8
-
       const distance = Math.min(Math.sqrt(dx * dx + dy * dy), 1.0)
-
-      // Invert: close to center = last frame (zoomed in), edge = first frame
       const ratio = 1 - distance
-      // Cubic ease-out: fast at edges, decelerates approaching center
       const eased = 1 - Math.pow(1 - ratio, 3)
       targetFrameRef.current = Math.floor(eased * (TOTAL_FRAMES - 1))
     }
 
-    // Resume auto-play when mouse leaves
-    const handleMouseLeave = () => {
-      autoPlayRef.current = true
-    }
+    const handleMouseLeave = () => { autoPlayRef.current = true }
 
-    // Mobile: device orientation — tilt magnitude from level
     const handleOrientation = (e: DeviceOrientationEvent) => {
       autoPlayRef.current = false
-      const beta = e.beta ?? 0  // front-back tilt (-180 to 180)
-      const gamma = e.gamma ?? 0 // left-right tilt (-90 to 90)
-
-      // Distance from "level" position (phone flat: beta=0, gamma=0 when held upright ~45deg)
-      // Normalize: phone upright is beta ~45-90, flat is beta ~0
-      // Use deviation from a "resting" position
-      const restBeta = 45 // typical holding angle
+      const beta = e.beta ?? 0
+      const gamma = e.gamma ?? 0
+      const restBeta = 45
       const betaDev = Math.abs(beta - restBeta)
       const gammaDev = Math.abs(gamma)
-
       const tiltMagnitude = Math.sqrt(betaDev * betaDev + gammaDev * gammaDev)
       const maxTilt = 60
-
-      // Invert: level (pointed at screen) = zoomed in, tilted = zoomed out
       const ratio = 1 - Math.min(tiltMagnitude / maxTilt, 1)
       const eased = ratio * ratio
       const index = Math.floor(eased * (TOTAL_FRAMES - 1))
-
       if (Math.abs(index - currentFrameRef.current) >= 2) {
         if (navigator.vibrate) navigator.vibrate(8)
       }
-
       targetFrameRef.current = index
     }
 
     window.addEventListener('mousemove', handleMouse)
     document.addEventListener('mouseleave', handleMouseLeave)
-
     if (motionPermission === 'granted') {
       window.addEventListener('deviceorientation', handleOrientation)
     }
-
     const handleResize = () => drawFrame(currentFrameRef.current)
     window.addEventListener('resize', handleResize)
 
@@ -183,38 +218,27 @@ export function VideoCanvas() {
       window.removeEventListener('deviceorientation', handleOrientation)
       window.removeEventListener('resize', handleResize)
     }
-  }, [loaded, motionPermission, drawFrame])
+  }, [loaded, transitioning, motionPermission, drawFrame])
 
   // iOS motion permission
   const requestMotionPermission = useCallback(async () => {
-    const DME = DeviceOrientationEvent as unknown as {
-      requestPermission?: () => Promise<string>
-    }
+    const DME = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }
     if (typeof DME.requestPermission === 'function') {
       try {
         const result = await DME.requestPermission()
         setMotionPermission(result as 'granted' | 'denied')
-      } catch {
-        setMotionPermission('denied')
-      }
+      } catch { setMotionPermission('denied') }
     } else {
       setMotionPermission('granted')
     }
   }, [])
 
-  // Auto-request on mobile
   useEffect(() => {
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
     if (!isMobile) return
-
-    const DME = DeviceOrientationEvent as unknown as {
-      requestPermission?: () => Promise<string>
-    }
+    const DME = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }
     if (typeof DME.requestPermission === 'function') {
-      const handleTouch = () => {
-        requestMotionPermission()
-        window.removeEventListener('touchstart', handleTouch)
-      }
+      const handleTouch = () => { requestMotionPermission(); window.removeEventListener('touchstart', handleTouch) }
       window.addEventListener('touchstart', handleTouch, { once: true })
       return () => window.removeEventListener('touchstart', handleTouch)
     } else {
@@ -229,14 +253,12 @@ export function VideoCanvas() {
         className="fixed inset-0 h-full w-full"
         style={{ willChange: 'transform', zIndex: -1 }}
       />
-      {/* Gentle atmospheric depth — not a veil, just enough for text contrast */}
       <div
+        ref={overlayRef}
         className="pointer-events-none fixed inset-0"
         style={{
           zIndex: -1,
-          background: [
-            'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 40%, rgba(0,0,0,0.1) 60%, rgba(26,23,20,0.85) 90%, rgba(26,23,20,1) 100%)',
-          ].join(', '),
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 40%, rgba(0,0,0,0.1) 60%, rgba(26,23,20,0.85) 90%, rgba(26,23,20,1) 100%)',
         }}
       />
     </>

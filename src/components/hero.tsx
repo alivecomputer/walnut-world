@@ -3,7 +3,11 @@
 import { Apple, Monitor, Send } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-export function Hero() {
+interface HeroProps {
+  onDownloadClick?: () => void
+}
+
+export function Hero({ onDownloadClick }: HeroProps) {
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
@@ -42,10 +46,9 @@ export function Hero() {
             Send to your Mac
           </a>
         ) : (
-          <a
-            href="#download"
-            id="download"
-            className="inline-flex items-center gap-2.5 rounded-full px-8 py-3.5 text-base font-semibold transition-all hover:scale-105 hover:brightness-110 active:scale-100"
+          <button
+            onClick={onDownloadClick}
+            className="inline-flex cursor-pointer items-center gap-2.5 rounded-full px-8 py-3.5 text-base font-semibold transition-all hover:scale-105 hover:brightness-110 active:scale-100"
             style={{
               backgroundColor: '#D97706',
               color: '#FFF8EE',
@@ -54,7 +57,7 @@ export function Hero() {
           >
             <Apple className="size-5" />
             Build Your World on Mac
-          </a>
+          </button>
         )}
         {isMobile && (
           <p className="max-w-xs text-xs" style={{ color: 'rgba(255, 248, 238, 0.35)' }}>

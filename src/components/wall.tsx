@@ -46,12 +46,7 @@ function ClaimCTA({ name }: { name: string }) {
         <>
           <a
             href={`mailto:?subject=Walnut%20%E2%80%94%20${name}.walnut.world&body=Claim%20your%20world%3A%20https%3A%2F%2Fwalnut.world`}
-            className="inline-flex items-center gap-2.5 rounded-full px-6 py-3 text-sm font-semibold transition-all hover:scale-105 hover:brightness-110 active:scale-100"
-            style={{
-              backgroundColor: '#D97706',
-              color: '#FFF8EE',
-              boxShadow: '0 4px 20px rgba(217, 119, 6, 0.3)',
-            }}
+            className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream px-6 py-3 text-sm font-semibold text-[#1a1714] shadow-md transition-all hover:scale-[1.03] active:scale-100"
           >
             <Send className="size-4" />
             Send link to your Mac
@@ -65,12 +60,7 @@ function ClaimCTA({ name }: { name: string }) {
         <>
           <a
             href="#download"
-            className="inline-flex items-center gap-2.5 rounded-full px-6 py-3 text-sm font-semibold transition-all hover:scale-105 hover:brightness-110 active:scale-100"
-            style={{
-              backgroundColor: '#D97706',
-              color: '#FFF8EE',
-              boxShadow: '0 4px 20px rgba(217, 119, 6, 0.3)',
-            }}
+            className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream px-6 py-3 text-sm font-semibold text-[#1a1714] shadow-md transition-all hover:scale-[1.03] active:scale-100"
           >
             <Apple className="size-4" />
             Get Walnut for Mac
@@ -145,7 +135,7 @@ export function Wall() {
             The Wall
           </h2>
           <p className="mt-2 text-base text-cream/40">
-            Claim your address — free for the first 10,000
+            Free for the first 10,000 worldbuilders
           </p>
           <p className="group relative mt-1.5 inline-block cursor-default text-xs text-cream/25">
             After 10,000: one-time purchase, own it forever

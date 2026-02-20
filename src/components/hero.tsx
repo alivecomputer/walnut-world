@@ -43,7 +43,10 @@ export function Hero({ onDownloadClick }: HeroProps) {
           </a>
         ) : (
           <button
-            onClick={onDownloadClick}
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.plausible) window.plausible('Download Click')
+              onDownloadClick?.()
+            }}
             className="group inline-flex cursor-pointer items-center gap-2.5 rounded-full border border-cream/20 bg-cream px-8 py-3.5 text-base font-semibold text-[#1a1714] shadow-lg shadow-black/10 transition-all hover:scale-[1.03] hover:shadow-xl hover:shadow-black/15 active:scale-100"
           >
             <Apple className="size-5" />

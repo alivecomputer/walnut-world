@@ -109,6 +109,9 @@ export function Wall() {
   const handleClaim = () => {
     if (state === 'available') {
       setState('claim')
+      if (typeof window !== 'undefined' && window.plausible) {
+        window.plausible('Username Claimed', { props: { name: cleanName } })
+      }
     }
   }
 

@@ -41,7 +41,7 @@ function ClaimCTA({ name }: { name: string }) {
   return (
     <div className="space-y-4">
       <p className="text-cream/70">
-        <span className="text-cream">{name}.walnut.world</span> is yours — inside Walnut.
+        <span className="text-cream">{name}.walnut.world</span> — build your world to activate it.
       </p>
       {isMobile ? (
         <>
@@ -77,14 +77,16 @@ function ClaimCTA({ name }: { name: string }) {
 
 export function Wall() {
   const [input, setInput] = useState('')
-  const [state, setState] = useState<'idle' | 'checking' | 'available' | 'taken' | 'held' | 'reserved' | 'claim'>('idle')
-  const [holdMinutes, setHoldMinutes] = useState(0)
+  const [pin, setPin] = useState('')
+  const [state, setState] = useState<'idle' | 'checking' | 'available' | 'taken' | 'held' | 'pin' | 'reserving' | 'reserved' | 'claim'>('idle')
+  const [holdHours, setHoldHours] = useState(0)
   const cleanName = input.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20)
 
   // Check name availability via API (falls back to static list if API unavailable)
   useEffect(() => {
     if (!cleanName) {
       setState('idle')
+      setPin('')
       return
     }
 
@@ -98,7 +100,6 @@ export function Wall() {
           else if (data.status === 'held') setState('held')
           else setState('available')
         } else {
-          // Fallback to static check
           setState(TAKEN_NAMES.includes(cleanName) ? 'taken' : 'available')
         }
       } catch {
@@ -109,45 +110,57 @@ export function Wall() {
     return () => clearTimeout(timer)
   }, [cleanName])
 
-  // Reserve name via API
-  const handleClaim = async () => {
-    if (state !== 'available') return
+  // Step 1: press enter on available name → show PIN input
+  const handleNameEnter = () => {
+    if (state === 'available') {
+      setState('pin')
+    }
+  }
+
+  // Step 2: submit PIN → reserve
+  const handlePinSubmit = async () => {
+    if (pin.length !== 4) return
+    setState('reserving')
 
     try {
       const res = await fetch('/api/name/reserve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: cleanName }),
+        body: JSON.stringify({ name: cleanName, pin }),
       })
       const data = await res.json()
 
       if (data.ok) {
-        setHoldMinutes(Math.ceil((data.holdSeconds ?? 1800) / 60))
+        setHoldHours(Math.round((data.holdSeconds ?? 86400) / 3600))
         setState('reserved')
         if (typeof window !== 'undefined' && window.plausible) {
-          window.plausible('Username Reserved', { props: { name: cleanName } })
+          window.plausible('Link Reserved', { props: { name: cleanName } })
         }
       } else {
-        // Someone else grabbed it
         setState('taken')
       }
     } catch {
-      // API down — show claim flow anyway
       setState('claim')
       if (typeof window !== 'undefined' && window.plausible) {
-        window.plausible('Username Claimed', { props: { name: cleanName } })
+        window.plausible('Link Reserved', { props: { name: cleanName } })
       }
     }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleClaim()
+      handleNameEnter()
+    }
+  }
+
+  const handlePinKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && pin.length === 4) {
+      handlePinSubmit()
     }
   }
 
   return (
-    <section className="relative px-4 py-24 sm:px-12">
+    <section id="wall" className="relative px-4 py-24 sm:px-12">
       <div
         className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl p-8 sm:p-12"
         style={COPPER_GLASS}
@@ -211,10 +224,10 @@ export function Wall() {
           </div>
         </div>
 
-        {/* 4. CLAIM YOUR WORLD — input */}
+        {/* 4. GET YOUR LINK — input */}
         <div className="mt-10 text-center">
           <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-cream/55">
-            Claim your world
+            Get your link
           </h3>
         </div>
 
@@ -254,19 +267,57 @@ export function Wall() {
                 )}
                 {state === 'available' && (
                   <button
-                    onClick={handleClaim}
+                    onClick={handleNameEnter}
                     className="group cursor-pointer text-emerald-400/90 transition-colors hover:text-emerald-300"
                   >
                     {cleanName}.walnut.world is available
                     <span className="ml-2 text-cream/30 transition-colors group-hover:text-cream/60">
-                      press enter to save
+                      press enter
                     </span>
                   </button>
+                )}
+                {state === 'pin' && (
+                  <div className="mt-2 space-y-3">
+                    <p className="text-emerald-400/80">
+                      Set a 4-digit PIN to hold your link
+                    </p>
+                    <div className="mx-auto flex max-w-[160px] items-center justify-center">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        onKeyDown={handlePinKeyDown}
+                        placeholder="• • • •"
+                        className="w-full rounded-lg border border-cream/15 bg-black/20 px-4 py-3 text-center font-mono text-lg tracking-[0.5em] text-cream outline-none placeholder:text-cream/20"
+                        maxLength={4}
+                        autoFocus
+                      />
+                    </div>
+                    {pin.length === 4 && (
+                      <button
+                        onClick={handlePinSubmit}
+                        className="cursor-pointer text-emerald-400/90 transition-colors hover:text-emerald-300"
+                      >
+                        hold {cleanName}.walnut.world for 24 hours →
+                      </button>
+                    )}
+                    <p className="text-[11px] text-cream/25">
+                      You&apos;ll use this PIN when you set up your world
+                    </p>
+                  </div>
+                )}
+                {state === 'reserving' && (
+                  <span className="text-cream/40">reserving...</span>
                 )}
                 {state === 'reserved' && (
                   <div className="space-y-3">
                     <p className="text-emerald-400/90">
-                      <span className="text-emerald-300">{cleanName}.walnut.world</span> saved for {holdMinutes} minutes
+                      <span className="text-emerald-300">{cleanName}.walnut.world</span> is yours for {holdHours} hours
+                    </p>
+                    <p className="text-xs text-cream/40">
+                      Build your world to activate it. Your PIN unlocks the link.
                     </p>
                     <ClaimCTA name={cleanName} />
                   </div>
@@ -282,12 +333,12 @@ export function Wall() {
         {/* 5. PRICING */}
         <div className="mt-8 text-center">
           <p className="text-sm text-cream/60">
-            First 10,000 are free
+            First 10,000 links are free
           </p>
           <p className="group relative mt-1.5 inline-block cursor-default text-xs text-cream/40">
-            After 10,000: one-time purchase, own it forever
+            After 10,000: one-time purchase, yours forever
             <span className="pointer-events-none absolute -bottom-20 left-1/2 z-10 w-64 -translate-x-1/2 rounded-lg bg-black/90 px-4 py-3 text-left text-xs leading-relaxed text-cream/60 opacity-0 shadow-lg backdrop-blur transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-              You don&apos;t need a world address to be a worldbuilder or use Walnut. Everything is open source. The domains are for the culture.
+              You don&apos;t need a link to use Walnut. Everything is open source. The links are for the culture.
             </span>
           </p>
         </div>

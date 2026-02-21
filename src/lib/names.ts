@@ -3,110 +3,126 @@ import { kv } from '@vercel/kv'
 /**
  * Link reservation system for walnut.world
  *
- * Keys in KV:
- *   link:{name}:owner      → "claimed" (permanent)
- *   link:{name}:hold       → hashed PIN (TTL = hold duration)
- *   link:{name}:pin        → hashed PIN (TTL = hold duration)
- *   link:{name}:lapses     → lapse count for escalating cooldown
- *
- * Flow:
- *   1. Check name → available
- *   2. Set 4-digit PIN → reserve for 24 hours
- *   3. Install Walnut, enter name + PIN → claim permanently
- *
- * Escalating cooldown on lapses:
- *   0 lapses → 24 hours
- *   1 lapse  → 24 hours (same)
- *   2+ lapses → 24 hours (capped, but lapse count tracks abuse)
+ * KV structure:
+ *   link:{name}:pin          → hashed PIN (permanent)
+ *   link:{name}:reserved_at  → ISO timestamp
+ *   link:{name}:security_q   → security question (optional)
+ *   link:{name}:security_a   → hashed answer (optional)
+ *   link:{name}:invited_by   → referrer name
+ *   link:{name}:invite_count → number of people invited
+ *   links:all                → sorted set of all reserved names (score = timestamp)
+ *   links:count              → total reserved count
  */
 
-const HOLD_SECONDS = 24 * 60 * 60 // 24 hours
 const FOUNDING_NAMES = ['ben', 'attila', 'will', 'stuart', 'clara', 'leon']
 
-// Simple hash for PIN (not crypto-grade, but sufficient for holds)
-function hashPin(pin: string): string {
+function hashValue(val: string): string {
   let h = 0
-  for (let i = 0; i < pin.length; i++) {
-    h = pin.charCodeAt(i) + ((h << 5) - h)
+  for (let i = 0; i < val.length; i++) {
+    h = val.charCodeAt(i) + ((h << 5) - h)
   }
   return Math.abs(h).toString(36)
 }
 
+export function cleanName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20)
+}
+
 export type NameStatus =
   | { status: 'taken' }
-  | { status: 'held'; expiresIn: number }
+  | { status: 'reserved' }
   | { status: 'available' }
 
 export async function checkName(name: string): Promise<NameStatus> {
-  const clean = name.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20)
+  const clean = cleanName(name)
   if (!clean) return { status: 'taken' }
+  if (FOUNDING_NAMES.includes(clean)) return { status: 'taken' }
 
-  if (FOUNDING_NAMES.includes(clean)) {
-    return { status: 'taken' }
-  }
-
-  const owner = await kv.get<string>(`link:${clean}:owner`)
-  if (owner) return { status: 'taken' }
-
-  const hold = await kv.get<string>(`link:${clean}:hold`)
-  if (hold) {
-    const ttl = await kv.ttl(`link:${clean}:hold`)
-    return { status: 'held', expiresIn: ttl }
-  }
+  const pin = await kv.get<string>(`link:${clean}:pin`)
+  if (pin) return { status: 'reserved' }
 
   return { status: 'available' }
 }
 
 export interface ReserveResult {
   ok: boolean
-  holdSeconds?: number
   error?: string
+  count?: number
 }
 
-export async function reserveName(name: string, pin: string): Promise<ReserveResult> {
-  const clean = name.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20)
+export async function reserveName(
+  name: string,
+  pin: string,
+  invitedBy?: string
+): Promise<ReserveResult> {
+  const clean = cleanName(name)
   if (!clean) return { ok: false, error: 'Invalid name' }
   if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
     return { ok: false, error: 'PIN must be 4 digits' }
   }
+  if (FOUNDING_NAMES.includes(clean)) return { ok: false, error: 'Link is taken' }
 
-  if (FOUNDING_NAMES.includes(clean)) {
-    return { ok: false, error: 'Link is taken' }
+  // Check if already reserved
+  const existing = await kv.get<string>(`link:${clean}:pin`)
+  if (existing) return { ok: false, error: 'Link is already reserved' }
+
+  const hashed = hashValue(pin)
+  const now = new Date().toISOString()
+
+  // Reserve permanently (no TTL)
+  await kv.set(`link:${clean}:pin`, hashed)
+  await kv.set(`link:${clean}:reserved_at`, now)
+
+  // Add to the global set + increment count
+  await kv.zadd('links:all', { score: Date.now(), member: clean })
+  const count = await kv.incr('links:count')
+
+  // Track invite referral
+  if (invitedBy) {
+    const cleanRef = cleanName(invitedBy)
+    if (cleanRef && cleanRef !== clean) {
+      await kv.set(`link:${clean}:invited_by`, cleanRef)
+      await kv.incr(`link:${cleanRef}:invite_count`)
+    }
   }
 
-  const owner = await kv.get<string>(`link:${clean}:owner`)
-  if (owner) return { ok: false, error: 'Link is taken' }
-
-  const hold = await kv.get<string>(`link:${clean}:hold`)
-  if (hold) return { ok: false, error: 'Link is currently held' }
-
-  const hashed = hashPin(pin)
-
-  // Reserve with 24hr TTL
-  await kv.set(`link:${clean}:hold`, hashed, { ex: HOLD_SECONDS })
-  await kv.set(`link:${clean}:pin`, hashed, { ex: HOLD_SECONDS })
-
-  // Track lapses (incremented now, reset on permanent claim)
-  const lapses = (await kv.get<number>(`link:${clean}:lapses`)) ?? 0
-  await kv.set(`link:${clean}:lapses`, lapses + 1)
-
-  return { ok: true, holdSeconds: HOLD_SECONDS }
+  return { ok: true, count }
 }
 
-export async function claimName(name: string, pin: string): Promise<{ ok: boolean; error?: string }> {
-  const clean = name.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20)
+export async function setSecurityQuestion(
+  name: string,
+  pin: string,
+  question: string,
+  answer: string
+): Promise<{ ok: boolean; error?: string }> {
+  const clean = cleanName(name)
   if (!clean) return { ok: false, error: 'Invalid name' }
 
+  // Verify PIN
   const storedPin = await kv.get<string>(`link:${clean}:pin`)
-  if (!storedPin || storedPin !== hashPin(pin)) {
+  if (!storedPin || storedPin !== hashValue(pin)) {
     return { ok: false, error: 'Wrong PIN' }
   }
 
-  // Permanently claim
-  await kv.set(`link:${clean}:owner`, 'claimed')
-  await kv.del(`link:${clean}:hold`)
-  await kv.del(`link:${clean}:pin`)
-  await kv.del(`link:${clean}:lapses`)
+  await kv.set(`link:${clean}:security_q`, question)
+  await kv.set(`link:${clean}:security_a`, hashValue(answer.toLowerCase().trim()))
 
   return { ok: true }
+}
+
+export async function getReservedCount(): Promise<number> {
+  const count = await kv.get<number>('links:count')
+  return (count ?? 0) + FOUNDING_NAMES.length
+}
+
+export async function getReservedNames(): Promise<string[]> {
+  const names = await kv.zrange('links:all', 0, -1) as string[]
+  return [...FOUNDING_NAMES, ...names]
+}
+
+export async function getInviteCount(name: string): Promise<number> {
+  const clean = cleanName(name)
+  if (!clean) return 0
+  const count = await kv.get<number>(`link:${clean}:invite_count`)
+  return count ?? 0
 }

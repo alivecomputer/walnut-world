@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/:name", "has": [{ "type": "host", "value": "invite.walnut.world" }], "destination": "/invite/:name" },
     { "source": "/", "has": [{ "type": "host", "value": "ben.walnut.world" }], "destination": "/ben" },
     { "source": "/", "has": [{ "type": "host", "value": "attila.walnut.world" }], "destination": "/attila" },
     { "source": "/", "has": [{ "type": "host", "value": "stuart.walnut.world" }], "destination": "/stuart" },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkName } from '@/lib/names'
+import { checkName, getReservedCount } from '@/lib/names'
 
 export async function GET(req: NextRequest) {
   const name = req.nextUrl.searchParams.get('name')
@@ -8,5 +8,6 @@ export async function GET(req: NextRequest) {
   }
 
   const result = await checkName(name)
-  return NextResponse.json(result)
+  const count = await getReservedCount()
+  return NextResponse.json({ ...result, totalReserved: count })
 }

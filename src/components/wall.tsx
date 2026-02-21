@@ -1,18 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Apple, Send, Monitor } from 'lucide-react'
+import { Apple, Send, Monitor, Share2 } from 'lucide-react'
 import { COPPER_GLASS, COPPER_SHEEN } from '@/lib/copper-glass'
 
-const TAKEN_NAMES = ['ben', 'attila', 'will', 'stuart', 'clara', 'leon']
-
-const WALL_TAGS = [
-  ...TAKEN_NAMES.map(name => ({ name, active: true })),
-  ...Array.from({ length: 4 }, (_, i) => ({
-    name: String(i + 1).padStart(3, '0'),
-    active: false,
-  })),
-]
+const FOUNDING_NAMES = ['ben', 'attila', 'will', 'stuart', 'clara', 'leon']
 
 function hash(str: string): number {
   let h = 0
@@ -33,10 +25,19 @@ function getOffset(name: string): { x: number; y: number } {
 
 function ClaimCTA({ name }: { name: string }) {
   const [isMobile, setIsMobile] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     setIsMobile(/iPhone|iPad|Android/i.test(navigator.userAgent))
   }, [])
+
+  const inviteLink = `https://invite.walnut.world/${name}`
+
+  const copyInvite = () => {
+    navigator.clipboard.writeText(inviteLink)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="space-y-4">
@@ -44,33 +45,31 @@ function ClaimCTA({ name }: { name: string }) {
         <span className="text-cream">{name}.walnut.world</span> — build your world to activate it.
       </p>
       {isMobile ? (
-        <>
-          <a
-            href={`mailto:?subject=Walnut%20%E2%80%94%20${name}.walnut.world&body=Claim%20your%20world%3A%20https%3A%2F%2Fwalnut.world`}
-            className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream px-6 py-3 text-sm font-semibold text-[#1a1714] shadow-md transition-all hover:scale-[1.03] active:scale-100"
-          >
-            <Send className="size-4" />
-            Send link to your Mac
-          </a>
-          <p className="text-xs text-cream/30">
-            <Monitor className="mb-0.5 mr-1 inline size-3" />
-            Walnut runs in your terminal
-          </p>
-        </>
+        <a
+          href={`mailto:?subject=Walnut%20%E2%80%94%20Build%20Your%20World&body=Open%20this%20on%20your%20Mac%3A%20https%3A%2F%2Fwalnut.world`}
+          className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream px-6 py-3 text-sm font-semibold text-[#1a1714] shadow-md transition-all hover:scale-[1.03] active:scale-100"
+        >
+          <Send className="size-4" />
+          Send link to your Mac
+        </a>
       ) : (
-        <>
-          <a
-            href="#download"
-            className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream px-6 py-3 text-sm font-semibold text-[#1a1714] shadow-md transition-all hover:scale-[1.03] active:scale-100"
-          >
-            <Apple className="size-4" />
-            Get Walnut for Mac
-          </a>
-          <p className="text-xs text-cream/30">
-            Open source. Your files. Your machine.
-          </p>
-        </>
+        <a
+          href="#download"
+          className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream px-6 py-3 text-sm font-semibold text-[#1a1714] shadow-md transition-all hover:scale-[1.03] active:scale-100"
+        >
+          <Apple className="size-4" />
+          Get Walnut for Mac
+        </a>
       )}
+      <div className="pt-2">
+        <button
+          onClick={copyInvite}
+          className="inline-flex cursor-pointer items-center gap-2 font-mono text-xs text-cream/40 transition-colors hover:text-cream/60"
+        >
+          <Share2 className="size-3" />
+          {copied ? 'copied!' : 'copy your invite link'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -78,17 +77,38 @@ function ClaimCTA({ name }: { name: string }) {
 export function Wall() {
   const [input, setInput] = useState('')
   const [pin, setPin] = useState('')
-  const [state, setState] = useState<'idle' | 'checking' | 'available' | 'taken' | 'held' | 'pin' | 'reserving' | 'reserved' | 'claim'>('idle')
-  const [holdHours, setHoldHours] = useState(0)
+  const [securityQ, setSecurityQ] = useState('')
+  const [securityA, setSecurityA] = useState('')
+  const [state, setState] = useState<
+    'idle' | 'checking' | 'available' | 'taken' | 'reserved_already' |
+    'pin' | 'reserving' | 'reserved' | 'security' | 'done' | 'claim'
+  >('idle')
+  const [wallNames, setWallNames] = useState<string[]>(FOUNDING_NAMES)
+  const [totalCount, setTotalCount] = useState(FOUNDING_NAMES.length)
+  const [ref, setRef] = useState<string | undefined>()
   const cleanName = input.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20)
 
-  // Check name availability via API (falls back to static list if API unavailable)
+  // Pick up ?ref= from URL for invite tracking
   useEffect(() => {
-    if (!cleanName) {
-      setState('idle')
-      setPin('')
-      return
-    }
+    const params = new URLSearchParams(window.location.search)
+    const r = params.get('ref')
+    if (r) setRef(r)
+  }, [])
+
+  // Fetch existing wall names
+  useEffect(() => {
+    fetch('/api/name/list')
+      .then(r => r.json())
+      .then(data => {
+        if (data.names) setWallNames(data.names)
+        if (data.count) setTotalCount(data.count)
+      })
+      .catch(() => {})
+  }, [])
+
+  // Check name availability
+  useEffect(() => {
+    if (!cleanName) { setState('idle'); setPin(''); return }
 
     setState('checking')
     const timer = setTimeout(async () => {
@@ -97,27 +117,24 @@ export function Wall() {
         if (res.ok) {
           const data = await res.json()
           if (data.status === 'taken') setState('taken')
-          else if (data.status === 'held') setState('held')
+          else if (data.status === 'reserved') setState('reserved_already')
           else setState('available')
+          if (data.totalReserved) setTotalCount(data.totalReserved)
         } else {
-          setState(TAKEN_NAMES.includes(cleanName) ? 'taken' : 'available')
+          setState(FOUNDING_NAMES.includes(cleanName) ? 'taken' : 'available')
         }
       } catch {
-        setState(TAKEN_NAMES.includes(cleanName) ? 'taken' : 'available')
+        setState(FOUNDING_NAMES.includes(cleanName) ? 'taken' : 'available')
       }
     }, 400)
 
     return () => clearTimeout(timer)
   }, [cleanName])
 
-  // Step 1: press enter on available name → show PIN input
   const handleNameEnter = () => {
-    if (state === 'available') {
-      setState('pin')
-    }
+    if (state === 'available') setState('pin')
   }
 
-  // Step 2: submit PIN → reserve
   const handlePinSubmit = async () => {
     if (pin.length !== 4) return
     setState('reserving')
@@ -126,12 +143,13 @@ export function Wall() {
       const res = await fetch('/api/name/reserve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: cleanName, pin }),
+        body: JSON.stringify({ name: cleanName, pin, invitedBy: ref }),
       })
       const data = await res.json()
 
       if (data.ok) {
-        setHoldHours(Math.round((data.holdSeconds ?? 86400) / 3600))
+        setTotalCount(data.count ?? totalCount + 1)
+        setWallNames(prev => [...prev, cleanName])
         setState('reserved')
         if (typeof window !== 'undefined' && window.plausible) {
           window.plausible('Link Reserved', { props: { name: cleanName } })
@@ -140,24 +158,35 @@ export function Wall() {
         setState('taken')
       }
     } catch {
-      setState('claim')
-      if (typeof window !== 'undefined' && window.plausible) {
-        window.plausible('Link Reserved', { props: { name: cleanName } })
-      }
+      // API down — show success anyway, will sync later
+      setWallNames(prev => [...prev, cleanName])
+      setState('reserved')
     }
+  }
+
+  const handleSecuritySubmit = async () => {
+    if (!securityQ || !securityA) return
+
+    try {
+      await fetch('/api/name/security', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: cleanName, pin, question: securityQ, answer: securityA }),
+      })
+    } catch {}
+
+    setState('done')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleNameEnter()
-    }
+    if (e.key === 'Enter') handleNameEnter()
   }
 
   const handlePinKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && pin.length === 4) {
-      handlePinSubmit()
-    }
+    if (e.key === 'Enter' && pin.length === 4) handlePinSubmit()
   }
+
+  const placeholderCount = Math.max(0, 4 - (wallNames.length - FOUNDING_NAMES.length))
 
   return (
     <section id="wall" className="relative px-4 py-24 sm:px-12">
@@ -165,46 +194,56 @@ export function Wall() {
         className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl p-8 sm:p-12"
         style={COPPER_GLASS}
       >
-        {/* Copper sheen */}
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-px"
           style={COPPER_SHEEN}
         />
 
-        {/* 1. THE WALL — title */}
+        {/* 1. THE WALL — title + tally */}
         <div className="text-center">
           <h2 className="font-mono text-sm uppercase tracking-[0.3em] text-amber-light">
             The Wall
           </h2>
+          <p className="mt-2 font-mono text-xs text-cream/40">
+            {totalCount.toLocaleString()} / 10,000
+          </p>
         </div>
 
-        {/* 2. NAMES — the tags grid */}
+        {/* 2. NAMES */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-          {WALL_TAGS.map((tag) => {
-            const offset = getOffset(tag.name)
+          {wallNames.map((name) => {
+            const offset = getOffset(name)
+            const isFounding = FOUNDING_NAMES.includes(name)
             return (
               <div
-                key={tag.name}
+                key={name}
                 className="group relative"
                 style={{
-                  transform: `rotate(${getRotation(tag.name)}deg) translate(${offset.x}px, ${offset.y}px)`,
+                  transform: `rotate(${getRotation(name)}deg) translate(${offset.x}px, ${offset.y}px)`,
                 }}
               >
-                {tag.active ? (
-                  <a
-                    href={`/${tag.name}`}
-                    className="block rounded-lg border border-amber/20 px-3 py-1.5 font-mono text-xs text-cream/80 transition-all hover:border-amber/40 hover:text-cream"
-                  >
-                    {tag.name}<span className="text-cream/40">.walnut.world</span>
-                  </a>
-                ) : (
-                  <div className="rounded-lg border border-cream/[0.08] px-3 py-1.5 font-mono text-xs text-cream/25">
-                    [ {tag.name} ]
-                  </div>
-                )}
+                <a
+                  href={isFounding ? `/${name}` : `#`}
+                  className={`block rounded-lg border border-amber/20 px-3 py-1.5 font-mono text-xs text-cream/80 transition-all hover:border-amber/40 hover:text-cream ${
+                    !isFounding ? 'pointer-events-none' : ''
+                  }`}
+                >
+                  {name}<span className="text-cream/40">.walnut.world</span>
+                </a>
               </div>
             )
           })}
+          {Array.from({ length: placeholderCount }, (_, i) => (
+            <div
+              key={`ph-${i}`}
+              className="rounded-lg border border-cream/[0.08] px-3 py-1.5 font-mono text-xs text-cream/25"
+              style={{
+                transform: `rotate(${(i % 5) - 2}deg)`,
+              }}
+            >
+              [ {String(i + 1).padStart(3, '0')} ]
+            </div>
+          ))}
         </div>
 
         {/* 3. SOVEREIGNTY STAMP */}
@@ -224,10 +263,10 @@ export function Wall() {
           </div>
         </div>
 
-        {/* 4. GET YOUR LINK — input */}
+        {/* 4. RESERVE YOUR LINK */}
         <div className="mt-10 text-center">
           <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-cream/55">
-            Get your link
+            Reserve your link
           </h3>
         </div>
 
@@ -260,9 +299,9 @@ export function Wall() {
                     {cleanName}.walnut.world is taken
                   </span>
                 )}
-                {state === 'held' && (
+                {state === 'reserved_already' && (
                   <span className="text-amber-light/60">
-                    {cleanName}.walnut.world is currently held
+                    {cleanName}.walnut.world is already reserved
                   </span>
                 )}
                 {state === 'available' && (
@@ -279,7 +318,7 @@ export function Wall() {
                 {state === 'pin' && (
                   <div className="mt-2 space-y-3">
                     <p className="text-emerald-400/80">
-                      Set a 4-digit PIN to hold your link
+                      Set a 4-digit PIN
                     </p>
                     <div className="mx-auto flex max-w-[160px] items-center justify-center">
                       <input
@@ -300,11 +339,11 @@ export function Wall() {
                         onClick={handlePinSubmit}
                         className="cursor-pointer text-emerald-400/90 transition-colors hover:text-emerald-300"
                       >
-                        hold {cleanName}.walnut.world for 24 hours →
+                        reserve {cleanName}.walnut.world →
                       </button>
                     )}
                     <p className="text-[11px] text-cream/25">
-                      You&apos;ll use this PIN when you set up your world
+                      You&apos;ll use this PIN when links go live
                     </p>
                   </div>
                 )}
@@ -312,15 +351,56 @@ export function Wall() {
                   <span className="text-cream/40">reserving...</span>
                 )}
                 {state === 'reserved' && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <p className="text-emerald-400/90">
-                      <span className="text-emerald-300">{cleanName}.walnut.world</span> is yours for {holdHours} hours
+                      <span className="text-emerald-300">{cleanName}.walnut.world</span> is reserved
                     </p>
                     <p className="text-xs text-cream/40">
-                      Build your world to activate it. Your PIN unlocks the link.
+                      Want to set a security question in case you forget your PIN?
                     </p>
-                    <ClaimCTA name={cleanName} />
+                    <button
+                      onClick={() => setState('security')}
+                      className="cursor-pointer font-mono text-xs text-cream/50 underline underline-offset-2 transition-colors hover:text-cream/70"
+                    >
+                      set security question
+                    </button>
+                    <span className="mx-3 text-cream/20">or</span>
+                    <button
+                      onClick={() => setState('done')}
+                      className="cursor-pointer font-mono text-xs text-cream/50 underline underline-offset-2 transition-colors hover:text-cream/70"
+                    >
+                      skip
+                    </button>
                   </div>
+                )}
+                {state === 'security' && (
+                  <div className="mt-2 space-y-3">
+                    <input
+                      type="text"
+                      value={securityQ}
+                      onChange={(e) => setSecurityQ(e.target.value)}
+                      placeholder="Your security question"
+                      className="w-full rounded-lg border border-cream/15 bg-black/20 px-4 py-3 font-mono text-sm text-cream outline-none placeholder:text-cream/25"
+                    />
+                    <input
+                      type="text"
+                      value={securityA}
+                      onChange={(e) => setSecurityA(e.target.value)}
+                      placeholder="Your answer"
+                      className="w-full rounded-lg border border-cream/15 bg-black/20 px-4 py-3 font-mono text-sm text-cream outline-none placeholder:text-cream/25"
+                    />
+                    {securityQ && securityA && (
+                      <button
+                        onClick={handleSecuritySubmit}
+                        className="cursor-pointer text-emerald-400/90 transition-colors hover:text-emerald-300"
+                      >
+                        save →
+                      </button>
+                    )}
+                  </div>
+                )}
+                {state === 'done' && (
+                  <ClaimCTA name={cleanName} />
                 )}
                 {state === 'claim' && (
                   <ClaimCTA name={cleanName} />

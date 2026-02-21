@@ -282,7 +282,7 @@ export function Wall() {
         {/* 5. PRICING */}
         <div className="mt-8 text-center">
           <p className="text-sm text-cream/60">
-            Free for the first 10,000 worldbuilders
+            First 10,000 are free
           </p>
           <p className="group relative mt-1.5 inline-block cursor-default text-xs text-cream/40">
             After 10,000: one-time purchase, own it forever

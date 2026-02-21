@@ -51,7 +51,7 @@ export function WorldPage({ owner, tagline, bio, walnuts }: WorldPageProps) {
             </div>
           </div>
           <Link
-            href="/"
+            href="/#wall"
             className="font-mono text-xs text-cream/40 transition-colors hover:text-cream/70"
           >
             get yours →

@@ -160,7 +160,7 @@ export function Wall() {
 
         {/* 1. THE WALL — title */}
         <div className="text-center">
-          <h2 className="font-mono text-sm uppercase tracking-[0.3em] text-amber-light/70">
+          <h2 className="font-mono text-sm uppercase tracking-[0.3em] text-amber-light">
             The Wall
           </h2>
         </div>
@@ -180,12 +180,12 @@ export function Wall() {
                 {tag.active ? (
                   <a
                     href={`/${tag.name}`}
-                    className="block rounded-lg border border-amber/20 px-3 py-1.5 font-mono text-xs text-cream/60 transition-all hover:border-amber/40 hover:text-cream/80"
+                    className="block rounded-lg border border-amber/20 px-3 py-1.5 font-mono text-xs text-cream/80 transition-all hover:border-amber/40 hover:text-cream"
                   >
-                    {tag.name}<span className="text-cream/25">.walnut.world</span>
+                    {tag.name}<span className="text-cream/40">.walnut.world</span>
                   </a>
                 ) : (
-                  <div className="rounded-lg border border-cream/[0.04] px-3 py-1.5 font-mono text-xs text-cream/15">
+                  <div className="rounded-lg border border-cream/[0.08] px-3 py-1.5 font-mono text-xs text-cream/25">
                     [ {tag.name} ]
                   </div>
                 )}
@@ -195,44 +195,44 @@ export function Wall() {
         </div>
 
         {/* 3. SOVEREIGNTY STAMP */}
-        <div className="mx-auto mt-10 max-w-sm border-t border-b border-cream/[0.06] py-6 text-center">
-          <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-cream/20">
+        <div className="mx-auto mt-10 max-w-sm border-t border-b border-cream/[0.1] py-6 text-center">
+          <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-cream/40">
             Your files. Your machine. Your rules.
           </div>
           <div className="mt-3 inline-flex items-center gap-3">
-            <div className="h-px w-6 bg-amber/30" />
-            <span className="font-mono text-xs tracking-widest text-amber/50">
+            <div className="h-px w-6 bg-amber/50" />
+            <span className="font-mono text-xs tracking-widest text-amber/70">
               SOVEREIGN OPERATOR
             </span>
-            <div className="h-px w-6 bg-amber/30" />
+            <div className="h-px w-6 bg-amber/50" />
           </div>
-          <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.4em] text-cream/20">
+          <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.4em] text-cream/40">
             Open source forever
           </div>
         </div>
 
         {/* 4. CLAIM YOUR WORLD — input */}
         <div className="mt-10 text-center">
-          <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-cream/35">
+          <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-cream/55">
             Claim your world
           </h3>
         </div>
 
         <div className="mx-auto mt-4 max-w-md">
           <div className="relative">
-            <div className="flex items-center overflow-hidden rounded-xl border border-cream/10 bg-black/20">
+            <div className="flex items-center overflow-hidden rounded-xl border border-cream/15 bg-black/20">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="yourname"
-                className="w-full bg-transparent px-4 py-3.5 font-mono text-base text-cream outline-none placeholder:text-cream/25"
+                className="w-full bg-transparent px-4 py-3.5 font-mono text-base text-cream outline-none placeholder:text-cream/35"
                 maxLength={20}
                 autoComplete="off"
                 spellCheck={false}
               />
-              <span className="shrink-0 pr-4 font-mono text-sm text-cream/30">
+              <span className="shrink-0 pr-4 font-mono text-sm text-cream/45">
                 .walnut.world
               </span>
             </div>
@@ -281,10 +281,10 @@ export function Wall() {
 
         {/* 5. PRICING */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-cream/40">
+          <p className="text-sm text-cream/60">
             Free for the first 10,000 worldbuilders
           </p>
-          <p className="group relative mt-1.5 inline-block cursor-default text-xs text-cream/25">
+          <p className="group relative mt-1.5 inline-block cursor-default text-xs text-cream/40">
             After 10,000: one-time purchase, own it forever
             <span className="pointer-events-none absolute -bottom-20 left-1/2 z-10 w-64 -translate-x-1/2 rounded-lg bg-black/90 px-4 py-3 text-left text-xs leading-relaxed text-cream/60 opacity-0 shadow-lg backdrop-blur transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
               You don&apos;t need a world address to be a worldbuilder or use Walnut. Everything is open source. The domains are for the culture.
